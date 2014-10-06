@@ -12,9 +12,10 @@
 (define RADIUS 10)
 (define BULLET-RADIUS 2)
 (define BULLET-SPEED 5)
+(define SEND-MESSAGE 3)
 
 ;; list of games and false or world
-(struct server (games waiting)#:prefab)
+(struct server (games waiting clock)#:prefab)
 ;;a message out is a list of with-bullets, score, a map, and the color of that dot
 (struct game (with-bullets score client1 client2 map)#:prefab)
 ;; blue dot first in list of dots
@@ -25,8 +26,9 @@
 
 (define (start-universe)
   (universe
-   (server empty #f)
+   (server empty #f 0)
    [on-new new-client]
+   [state "OliverFlatt"]
    [on-msg on-msg-key]
    [on-tick server-tick 0.01]
    [port 5000]))
@@ -34,31 +36,48 @@
 ;; SERVER TICK ###################################################################################################################################################################
 (define (server-tick b)
   (define results (games-tick (server-games b)))
-  (make-bundle
-   (server
-    results
-    (server-waiting b))
-   (tick-messages results)
-   empty))
+  (cond
+    [(equal? (server-clock b) SEND-MESSAGE)
+     (make-bundle
+      (server
+       results
+       (server-waiting b)
+       0)
+      (tick-messages results (server-games b))
+      empty)]
+    [else
+     (server
+      results
+      (server-waiting b)
+      (+ (server-clock b) 1))]))
+      
 
-(define (tick-messages r)
+(define (tick-messages r l)
   (cond
     [(empty? r)
      empty]
     [else
-     (define g (first r))
-     (cons
-      (make-mail (game-client1 g)
-                 (list (game-with-bullets g)
-                       (game-score g)
-                       (game-map g)))
-      (cons
-       (make-mail (game-client2 g) 
-                  (list (game-with-bullets g)
-                        (game-score g)
-                        (game-map g)))
-       (tick-messages (rest r))))]))
+     (define old-g (first l))
+     (define new-g (first r))
+     (append
+      (one-game-message old-g new-g)
+      (tick-messages (rest r) (rest l)))]))
 
+(define (one-game-message o n)
+  (cond
+    [(equal? o n)
+     empty]
+    [else
+     (list
+      (make-mail (game-client1 n)
+                 (list (game-with-bullets n)
+                       (game-score n)
+                       (game-map n)))
+      (make-mail (game-client2 n) 
+                 (list (game-with-bullets n)
+                       (game-score n)
+                       (game-map n))))]))
+     
 (module+ test
   (check-equal?
    (tick-messages
@@ -459,14 +478,16 @@
      (make-bundle
       (server
        (server-games b)
-       w)
+       w
+       (server-clock b))
       empty
       empty)]
     [else
      (make-bundle
       (server
        results
-       #f)
+       #f
+       (server-clock b))
       (list (make-mail w
                        (list
                         (game-with-bullets (first results))
@@ -499,13 +520,14 @@
    iworld1
    MAP))
 
-(check-equal? (new-client (server empty #f) iworld1) (make-bundle (server empty iworld1) empty empty))
-(check-equal? (new-client (server empty iworld2) iworld1) 
+(check-equal? (new-client (server empty #f 4) iworld1) (make-bundle (server empty iworld1 4) empty empty))
+(check-equal? (new-client (server empty iworld2 4) iworld1) 
               (make-bundle
                (server
                 (list
                  game-tester2)
-                #f)
+                #f
+                4)
                (list
                 (make-mail
                  iworld1
@@ -525,7 +547,8 @@
      (make-bundle
       (server
        results
-       (server-waiting b))
+       (server-waiting b)
+       (server-clock b))
       (message-key w results)
       empty)]
     [(equal? w (server-waiting b))
@@ -534,7 +557,8 @@
      (make-bundle
       (server
        results
-       (server-waiting b))
+       (server-waiting b)
+       (server-clock b))
       (message-key w results)
       empty)]))
 
@@ -704,8 +728,6 @@
      (take-away key (rest l))]
     [else
      (cons (first l) (take-away key (rest l)))]))
-
-
 
 (define (dot-add-key d key)
   (dot

@@ -1,6 +1,8 @@
 #lang racket
 (require rackunit 2htdp/universe 2htdp/image mzlib/string
-         (only-in racket/gui/base get-display-size))
+         (only-in racket/gui/base get-display-size)
+         "big-crunch.rkt")
+
 ;VARIABLES
 ;---------------------------------------------------------------
 (define WAITING-IMAGE
@@ -13,6 +15,7 @@
 (define RADIUS 10)
 (define BULLET-RADIUS 2)
 (define BULLET-SPEED 3)
+(define ADDRESS "localhost")
 
 ;STRUCTURE
 ;---------------------------------------------------------------
@@ -26,21 +29,15 @@
 ;---------------------------------------------------------------
 ;;state of waiting screen is false or the message
 
-(define clean-up (make-custodian))
-
 (define (start-game)
-  (define init-state
-    (parameterize ([current-custodian clean-up])
-      (big-bang
-       #f
-       [name "waiting"]
-       [on-receive connected]
-       [stop-when (lambda (s) (not (not s)))]
-       [on-draw waiting]
-       [register "localhost"]
-       [port 5000])))
-  (custodian-shutdown-all clean-up)
-  init-state)
+  (big-bang/big-crunch
+   #f
+   [name "waiting"]
+   [on-receive connected]
+   [stop-when (lambda (s) (not (not s)))]
+   [on-draw waiting]
+   [register ADDRESS]
+   [port 5000]))
 
 (define (connected s m)
   (game
@@ -66,7 +63,7 @@
       (on-release key-off-msg)
       (on-receive msg-state)
       (on-draw bullet-picture)
-      [register "localhost"]
+      [register ADDRESS]
       [port 5000])]
     [else #f]))
 
@@ -88,12 +85,20 @@
 
 (define nothing (rectangle 0 0 'solid "white"))
 
+;;Picture ########################################################################################################################################################################
+
 (define (bullet-picture d)
-  (add-one-bullet-picture
-   (first (with-bullets-bullets (game-with-bullets d))) "blue"
-   (add-one-bullet-picture
-    (second (with-bullets-bullets (game-with-bullets d))) "red"
-    (picture (with-bullets-dots (game-with-bullets d)) (game-score d) (game-map d)))))
+  (overlay/xy
+   (text (number->string (first (game-score d))) 24 "blue")
+   -20 (- (- HEIGHT 20))
+   (overlay/xy
+    (text (number->string (second (game-score d))) 24 "red")
+    (- (- WIDTH 20)) (- (- HEIGHT 20))
+    (add-one-bullet-picture
+     (first (with-bullets-bullets (game-with-bullets d))) "blue"
+     (add-one-bullet-picture
+      (second (with-bullets-bullets (game-with-bullets d))) "red"
+      (picture (with-bullets-dots (game-with-bullets d)) (game-score d) (game-map d)))))))
 
 ;; add-one-bullet-picture : bullet string pict -> pict
 (define (add-one-bullet-picture bullet color p)
