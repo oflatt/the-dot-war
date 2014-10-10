@@ -15,7 +15,7 @@
 (define RADIUS 10)
 (define BULLET-RADIUS 2)
 (define BULLET-SPEED 3)
-(define ADDRESS "localhost")
+(define ADDRESS "67.166.78.233")
 
 ;STRUCTURE
 ;---------------------------------------------------------------
