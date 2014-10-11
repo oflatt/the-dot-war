@@ -37,7 +37,7 @@
    [stop-when (lambda (s) (not (not s)))]
    [on-draw waiting]
    [register ADDRESS]
-   [port 5000]))
+   [port 50001]))
 
 (define (connected s m)
   (game
@@ -64,7 +64,7 @@
       (on-receive msg-state)
       (on-draw bullet-picture)
       [register ADDRESS]
-      [port 5000])]
+      [port 50001])]
     [else #f]))
 
 (define (key-msg s k)
