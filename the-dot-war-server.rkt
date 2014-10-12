@@ -5,7 +5,7 @@
 
 ;;MAP is a list like this structure: (struct map (walls starting-b starting-r)#:prefab)
 ;; walls is a list of walls, and a wall is a list of x1 and y1 and x2 and y2
-(define MAP (list (list (list 40 0 40 200)(list 80 0 80 200)) (list 0 0) (list 100 100)))
+(define MAP (list (list (list 640 0 640 200)(list 680 0 680 200)(list 400 600 860 600)) (list 600 600) (list 700 700)))
 (define HEIGHT 745)
 (define WIDTH 1260)
 (define SPEED 1)
@@ -57,26 +57,21 @@
     [(empty? r)
      empty]
     [else
-     (define old-g (first l))
      (define new-g (first r))
      (append
-      (one-game-message old-g new-g)
+      (one-game-message new-g)
       (tick-messages (rest r) (rest l)))]))
 
-(define (one-game-message o n)
-  (cond
-    [(equal? o n)
-     empty]
-    [else
-     (list
-      (make-mail (game-client1 n)
-                 (list (game-with-bullets n)
-                       (game-score n)
-                       (game-map n)))
-      (make-mail (game-client2 n) 
-                 (list (game-with-bullets n)
-                       (game-score n)
-                       (game-map n))))]))
+(define (one-game-message n)
+  (list
+   (make-mail (game-client1 n)
+              (list (game-with-bullets n)
+                    (game-score n)
+                    (game-map n)))
+   (make-mail (game-client2 n) 
+              (list (game-with-bullets n)
+                    (game-score n)
+                    (game-map n)))))
      
 (module+ test
   (check-equal?
